@@ -1,0 +1,82 @@
+services:
+  redis:
+    image: redis:8.8.0-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - common
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.4.3
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=true
+      - ELASTIC_PASSWORD=elastic
+      - xpack.security.http.ssl.enabled=false
+      - xpack.security.transport.ssl.enabled=false
+      - xpack.security.enrollment.enabled=false
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s -u elastic:elastic http://localhost:9200/_cluster/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - common
+
+  consul:
+    image: hashicorp/consul:2.0
+    environment:
+      - CONSUL_BIND_INTERFACE=eth0
+    ports:
+      - "8500:8500"
+    volumes:
+      - consul_data:/consul/data
+    healthcheck:
+      test: ["CMD", "consul", "members"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - common
+
+  rabbitmq:
+    image: rabbitmq:4.3.2-alpine
+    hostname: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - common
+
+networks:
+  common:
+    name: common-services
+
+volumes:
+  redis_data:
+    driver: local
+  elasticsearch_data:
+    driver: local
+  consul_data:
+    driver: local
+  rabbitmq_data:
+    driver: local
