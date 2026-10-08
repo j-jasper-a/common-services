@@ -1,4 +1,33 @@
 services:
+  postgres:
+    build:
+      context: .
+      dockerfile: Dockerfile_postgres
+    environment:
+      POSTGRES_DB: pathao_enterprise
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    command:
+      - postgres
+      - -c
+      - shared_preload_libraries=pg_cron
+      - -c
+      - cron.database_name=pathao_enterprise
+      - -c
+      - cron.use_background_workers=on
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/postgres-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d pathao_enterprise"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - common
+
   redis:
     image: docker.io/library/redis:8.8.0-alpine
     ports:
@@ -76,6 +105,8 @@ networks:
     name: common-services
 
 volumes:
+  postgres_data:
+    driver: local
   redis_data:
     driver: local
   elasticsearch_data:
